@@ -1,0 +1,13 @@
+{
+  "name": "zkstorage-share-file-example",
+  "version": "1.0.0",
+  "description": "File sharing example using @zkterm/zkstorage",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@zkterm/zkstorage": "file:../../dist"
+  }
+}

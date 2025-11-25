@@ -1,0 +1,13 @@
+{
+  "name": "zkstorage-basic-upload-example",
+  "version": "1.0.0",
+  "description": "Basic file encryption example using @zkterm/zkstorage",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@zkterm/zkstorage": "file:../../dist"
+  }
+}

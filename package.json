@@ -1,0 +1,52 @@
+{
+  "name": "@zkterm/zkstorage",
+  "version": "1.0.0",
+  "description": "Privacy-first decentralized file storage with client-side AES-256-GCM encryption. Files never leave your browser unencrypted - only the password holder can decrypt.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Run examples in examples/ folder\" && exit 0"
+  },
+  "keywords": [
+    "zkstorage",
+    "zkterm",
+    "zero-knowledge",
+    "encryption",
+    "aes-256-gcm",
+    "pbkdf2",
+    "ipfs",
+    "nft-storage",
+    "decentralized",
+    "privacy",
+    "client-side-encryption",
+    "file-storage",
+    "secure-storage"
+  ],
+  "author": "zkTerm",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zkterm/zkstorage"
+  },
+  "homepage": "https://zkterm.io",
+  "bugs": {
+    "url": "https://github.com/zkterm/zkstorage/issues"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browser": {
+    "crypto": false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "zkstorage-download-decrypt-example",
+  "version": "1.0.0",
+  "description": "Download and decrypt file example using @zkterm/zkstorage",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@zkterm/zkstorage": "file:../../dist"
+  }
+}
