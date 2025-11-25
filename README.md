@@ -10,6 +10,50 @@ Privacy-first decentralized file storage with client-side AES-256-GCM encryption
 - **File Integrity**: SHA-256 checksum validation on decrypt
 - **Secure Sharing**: Re-encrypt files with share keys (without revealing password)
 - **Browser & Node.js**: Core crypto works in both environments
+- **IPFS Storage**: Files stored on IPFS via NFT.Storage with real CIDs (bafyxxx format)
+
+## Production Backend
+
+zkStorage uses **NFT.Storage** for decentralized IPFS storage:
+
+- **Real IPFS CIDs**: Files return genuine Content Identifiers (`bafybeig...`)
+- **Gateway**: Files served from `https://nftstorage.link/ipfs/{cid}`
+- **Retry Logic**: 3 attempts with linear backoff for all IPFS operations
+- **Timeout Handling**: 30s for downloads, 60s for uploads
+- **Metadata Fallback**: Complete encryption metadata stored in database when IPFS gateway fails
+
+### Architecture Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT (Browser)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  1. User selects file + enters password                          │
+│  2. PBKDF2 derives encryption key (200k iterations)              │
+│  3. AES-256-GCM encrypts file with unique IV/salt                │
+│  4. SHA-256 checksum generated                                   │
+│  5. Encrypted blob sent to backend                               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        SERVER (Backend)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  1. Receives encrypted blob (server never sees plaintext)        │
+│  2. Uploads to NFT.Storage API                                   │
+│  3. Returns real IPFS CID (bafyxxx...)                           │
+│  4. Stores metadata in PostgreSQL (iv, salt, checksum)           │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     IPFS (NFT.Storage)                           │
+├─────────────────────────────────────────────────────────────────┤
+│  • Encrypted files stored permanently on IPFS                    │
+│  • Accessible via multiple gateways                              │
+│  • Content-addressed (CID = hash of encrypted content)           │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Installation
 
@@ -210,11 +254,37 @@ import { createStorageService } from '@zkterm/zkstorage';
 
 const storage = createStorageService({
   apiBaseUrl: 'https://api.myapp.com/storage',
-  ipfsGateway: 'https://gateway.pinata.cloud/ipfs/{cid}',
+  ipfsGateway: 'https://nftstorage.link/ipfs/{cid}', // Default gateway
   maxFileSize: 50 * 1024 * 1024, // 50MB
 });
 
 const result = await storage.uploadFile(file, password);
+console.log('IPFS CID:', result.cid); // bafybeig...
+```
+
+### Default Configuration
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `apiBaseUrl` | `/api/storage` | Backend API endpoint |
+| `ipfsGateway` | `https://nftstorage.link/ipfs/{cid}` | IPFS gateway URL template |
+| `maxFileSize` | 100MB | Maximum file size limit |
+
+### Alternative IPFS Gateways
+
+If the primary gateway is slow, the client provides fallback options:
+
+```typescript
+import { getAlternativeGateways } from '@zkterm/zkstorage';
+
+const cid = 'bafybeig...';
+const gateways = getAlternativeGateways(cid);
+// [
+//   'https://nftstorage.link/ipfs/bafybeig...',
+//   'https://cloudflare-ipfs.com/ipfs/bafybeig...',
+//   'https://ipfs.io/ipfs/bafybeig...',
+//   'https://gateway.pinata.cloud/ipfs/bafybeig...',
+// ]
 ```
 
 ## Examples
@@ -234,7 +304,9 @@ async function handleFileUpload(file: File, password: string) {
     return;
   }
 
-  console.log('Uploaded:', result.fileId);
+  console.log('File ID:', result.fileId);
+  console.log('IPFS CID:', result.cid);        // bafybeig...
+  console.log('Gateway:', result.gateway);      // https://nftstorage.link/ipfs/bafybeig...
   console.log('Size:', formatFileSize(result.size!));
   
   // Later, download the file
@@ -320,6 +392,25 @@ async function uploadToMyBackend(file: File, password: string) {
 4. **Unique Keys**: Each file gets unique IV (12 bytes) and salt (32 bytes)
 5. **Integrity Verification**: SHA-256 checksum validated on decrypt
 6. **Memory Safety**: Use ArrayBuffer (can be zeroed) for sensitive data
+7. **IPFS Immutability**: Content-addressed storage ensures files cannot be tampered with
+8. **Decentralized Storage**: Files stored across IPFS network, not single server
+
+### What the Server Stores
+
+The backend stores **only encrypted data** and **encryption metadata**:
+
+| Field | Description | Purpose |
+|-------|-------------|---------|
+| `cid` | IPFS Content Identifier | Locate encrypted file on IPFS |
+| `iv` | Initialization Vector (base64) | Required for AES-GCM decryption |
+| `salt` | Key derivation salt (base64) | Required for PBKDF2 key derivation |
+| `iterations` | PBKDF2 iteration count | Always 200,000 |
+| `checksum` | SHA-256 hash of original file | Verify integrity after decrypt |
+| `originalName` | Filename | Display purposes |
+| `originalSize` | File size in bytes | Display purposes |
+| `mimeType` | MIME type | Set correct Content-Type on download |
+
+**The server cannot decrypt your files** - it lacks your password.
 
 ## Requirements
 
