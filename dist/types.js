@@ -9,7 +9,7 @@ exports.DEFAULT_CONFIG = void 0;
  */
 exports.DEFAULT_CONFIG = {
     apiBaseUrl: '/api/storage',
-    ipfsGateway: 'https://nftstorage.link/ipfs/{cid}',
+    ipfsGateway: 'https://gateway.pinata.cloud/ipfs/{cid}',
     maxFileSize: 100 * 1024 * 1024, // 100MB
     fetchFn: typeof fetch !== 'undefined' ? fetch : (() => { throw new Error('fetch not available'); }),
 };

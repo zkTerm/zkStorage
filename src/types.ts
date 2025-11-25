@@ -132,7 +132,7 @@ export interface StorageConfig {
  */
 export const DEFAULT_CONFIG: Required<StorageConfig> = {
   apiBaseUrl: '/api/storage',
-  ipfsGateway: 'https://nftstorage.link/ipfs/{cid}',
+  ipfsGateway: 'https://gateway.pinata.cloud/ipfs/{cid}',
   maxFileSize: 100 * 1024 * 1024, // 100MB
   fetchFn: typeof fetch !== 'undefined' ? fetch : (() => { throw new Error('fetch not available'); }) as any,
 };

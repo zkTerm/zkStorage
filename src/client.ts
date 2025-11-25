@@ -347,10 +347,10 @@ export function createStorageClient(config: StorageConfig = {}) {
    */
   function getAlternativeGateways(cid: string): string[] {
     return [
-      `https://nftstorage.link/ipfs/${cid}`,
+      `https://gateway.pinata.cloud/ipfs/${cid}`,
       `https://cloudflare-ipfs.com/ipfs/${cid}`,
       `https://ipfs.io/ipfs/${cid}`,
-      `https://gateway.pinata.cloud/ipfs/${cid}`,
+      `https://dweb.link/ipfs/${cid}`,
     ];
   }
 
