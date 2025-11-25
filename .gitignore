@@ -1,0 +1,9 @@
+/node_modules
+
+QUICK_START.md
+TEST_INSTRUCTIONS.md
+
+package-lock.json
+
+/dist
+.DS_Store

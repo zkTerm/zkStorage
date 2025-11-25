@@ -101,11 +101,22 @@ interface PasswordFieldElements {
   high: bigint;
 }
 
+/**
+ * Ensure Uint8Array has proper ArrayBuffer backing (not SharedArrayBuffer)
+ * This fixes TypeScript compatibility with Web Crypto API
+ */
+function toBufferSource(arr: Uint8Array): BufferSource {
+  const buffer = new ArrayBuffer(arr.length);
+  const copy = new Uint8Array(buffer);
+  copy.set(arr);
+  return copy as BufferSource;
+}
+
 async function passwordToFieldElements(password: string): Promise<PasswordFieldElements> {
   const encoder = new TextEncoder();
   const bytes = encoder.encode(password);
   
-  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', toBufferSource(bytes));
   const hashBytes = new Uint8Array(hashBuffer);
   
   let low = BigInt(0);

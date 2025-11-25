@@ -204,6 +204,17 @@ function getCrypto(): Crypto {
 }
 
 /**
+ * Ensure Uint8Array has proper ArrayBuffer backing (not SharedArrayBuffer)
+ * This fixes TypeScript compatibility with Web Crypto API
+ */
+function toBufferSource(arr: Uint8Array): BufferSource {
+  const buffer = new ArrayBuffer(arr.length);
+  const copy = new Uint8Array(buffer);
+  copy.set(arr);
+  return copy as BufferSource;
+}
+
+/**
  * Generate random bytes for IV or salt
  */
 export function generateRandomBytes(length: number): Uint8Array {
@@ -234,7 +245,7 @@ export async function deriveKey(
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: toBufferSource(salt),
       iterations,
       hash: PBKDF2_HASH,
     },
@@ -285,7 +296,7 @@ export async function encryptFile(
   
   const crypto = getCrypto();
   const encryptedContent = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: toBufferSource(iv) },
     key,
     content
   );
@@ -323,7 +334,7 @@ export async function encryptContent(
   
   const crypto = getCrypto();
   const encryptedContent = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: toBufferSource(iv) },
     key,
     content
   );
@@ -363,7 +374,7 @@ export async function decryptFile(
   
   try {
     const decryptedContent = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
+      { name: 'AES-GCM', iv: toBufferSource(iv) },
       key,
       encryptedContent
     );
@@ -458,7 +469,7 @@ export async function createShareableFile(
   
   const crypto = getCrypto();
   const newEncryptedContent = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: newIv },
+    { name: 'AES-GCM', iv: toBufferSource(newIv) },
     key,
     decrypted.content
   );
@@ -522,10 +533,16 @@ export function createFileLike(
     arrayBuffer = content;
     size = content.byteLength;
   } else if (Buffer.isBuffer(content)) {
-    arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+    const buffer = new ArrayBuffer(content.length);
+    const view = new Uint8Array(buffer);
+    view.set(content);
+    arrayBuffer = buffer;
     size = content.length;
   } else if (content instanceof Uint8Array) {
-    arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+    const buffer = new ArrayBuffer(content.byteLength);
+    const view = new Uint8Array(buffer);
+    view.set(content);
+    arrayBuffer = buffer;
     size = content.byteLength;
   } else {
     throw new Error('Invalid content type. Expected Buffer, ArrayBuffer, or Uint8Array.');

@@ -163,6 +163,16 @@ function getCrypto() {
     throw new Error('Web Crypto API not available');
 }
 /**
+ * Ensure Uint8Array has proper ArrayBuffer backing (not SharedArrayBuffer)
+ * This fixes TypeScript compatibility with Web Crypto API
+ */
+function toBufferSource(arr) {
+    const buffer = new ArrayBuffer(arr.length);
+    const copy = new Uint8Array(buffer);
+    copy.set(arr);
+    return copy;
+}
+/**
  * Generate random bytes for IV or salt
  */
 function generateRandomBytes(length) {
@@ -179,7 +189,7 @@ async function deriveKey(password, salt, iterations = exports.PBKDF2_ITERATIONS)
     const baseKey = await crypto.subtle.importKey('raw', passwordBuffer, 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey({
         name: 'PBKDF2',
-        salt,
+        salt: toBufferSource(salt),
         iterations,
         hash: exports.PBKDF2_HASH,
     }, baseKey, {
@@ -216,7 +226,7 @@ async function encryptFile(file, password) {
     const key = await deriveKey(password, salt, exports.PBKDF2_ITERATIONS);
     const checksum = await calculateChecksum(content);
     const crypto = getCrypto();
-    const encryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, content);
+    const encryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toBufferSource(iv) }, key, content);
     return {
         encryptedContent,
         iv: uint8ArrayToBase64(iv),
@@ -243,7 +253,7 @@ async function encryptContent(content, password, metadata) {
     const key = await deriveKey(password, salt, exports.PBKDF2_ITERATIONS);
     const checksum = await calculateChecksum(content);
     const crypto = getCrypto();
-    const encryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, content);
+    const encryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toBufferSource(iv) }, key, content);
     return {
         encryptedContent,
         iv: uint8ArrayToBase64(iv),
@@ -271,7 +281,7 @@ async function decryptFile(encryptedContent, metadata, password) {
     const key = await deriveKey(password, salt, metadata.iterations);
     const crypto = getCrypto();
     try {
-        const decryptedContent = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encryptedContent);
+        const decryptedContent = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: toBufferSource(iv) }, key, encryptedContent);
         // Verify checksum - CRITICAL for file integrity
         const checksum = await calculateChecksum(decryptedContent);
         if (checksum !== metadata.checksum) {
@@ -345,7 +355,7 @@ async function createShareableFile(encryptedContent, originalMetadata, password,
     const newSalt = generateRandomBytes(exports.SALT_LENGTH);
     const key = await deriveKey(shareKey, newSalt, exports.PBKDF2_ITERATIONS);
     const crypto = getCrypto();
-    const newEncryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: newIv }, key, decrypted.content);
+    const newEncryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toBufferSource(newIv) }, key, decrypted.content);
     return {
         encryptedContent: newEncryptedContent,
         metadata: {
@@ -398,11 +408,17 @@ function createFileLike(content, name, mimeType = 'application/octet-stream') {
         size = content.byteLength;
     }
     else if (Buffer.isBuffer(content)) {
-        arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+        const buffer = new ArrayBuffer(content.length);
+        const view = new Uint8Array(buffer);
+        view.set(content);
+        arrayBuffer = buffer;
         size = content.length;
     }
     else if (content instanceof Uint8Array) {
-        arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+        const buffer = new ArrayBuffer(content.byteLength);
+        const view = new Uint8Array(buffer);
+        view.set(content);
+        arrayBuffer = buffer;
         size = content.byteLength;
     }
     else {
